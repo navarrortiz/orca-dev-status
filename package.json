@@ -1,0 +1,24 @@
+{
+  "name": "gnome-extension-boilerplate",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Minimal GNOME Shell extension boilerplate",
+  "scripts": {
+    "clean": "make clean",
+    "compile": "make",
+    "build": "npm run compile",
+    "install:extension": "make install",
+    "activate": "bash scripts/activate-extension.sh",
+    "deactivate": "gnome-extensions disable my-extension@your-domain || true",
+    "deactivate:old": "gnome-extensions disable one-thing@github.com || true",
+    "reinstall": "npm run compile && npm run install:extension",
+    "dev": "npm run deactivate:old && npm run deactivate && npm run reinstall && npm run activate",
+    "analyze:static": "bash scripts/static-analysis.sh",
+    "lint": "eslint 'src/**/*.js'",
+    "lint:fix": "eslint 'src/**/*.js' --fix"
+  },
+  "devDependencies": {
+    "eslint": "^10.10.0",
+    "eslint-plugin-jsdoc": "^46.8.2"
+  }
+}

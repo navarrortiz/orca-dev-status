@@ -1,0 +1,6 @@
+*.zip
+dist/
+*.log
+schemas/gschemas.compiled
+/venv/
+/docs/checklist/
