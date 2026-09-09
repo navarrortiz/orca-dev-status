@@ -2,7 +2,7 @@ import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/
 
 import { buildPreferencesPage } from './src/prefs/page.js';
 
-export default class BoilerplateExtensionPreferences extends ExtensionPreferences {
+export default class OrcaDevStatusPreferences extends ExtensionPreferences {
   fillPreferencesWindow(window) {
     window.add(buildPreferencesPage(this.getSettings()));
   }

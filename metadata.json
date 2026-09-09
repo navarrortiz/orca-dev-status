@@ -1,7 +1,7 @@
 {
-  "uuid": "my-extension@your-domain",
-  "name": "Hello Word GNOME Extension",
-  "description": "Shows Hello word! in the GNOME top bar",
+  "uuid": "orca-dev-status@navarrortiz.github.io",
+  "name": "Orca Dev Status",
+  "description": "Muestra el estado de los agentes de Orca en la barra superior",
   "settings-schema": "org.gnome.shell.extensions.my-extension",
   "shell-version": ["45", "46", "47", "48", "49", "50"],
   "url": "https://example.com",

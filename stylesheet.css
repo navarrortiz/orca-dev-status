@@ -1,4 +1,71 @@
-.gnome-boilerplate-panel-label {
+.orca-status-panel {
+  spacing: 6px;
   padding: 0 4px;
   font-weight: 600;
+}
+
+.orca-status-icon {
+  padding-bottom: 1px;
+}
+
+.orca-status-icon.orca-status-question {
+  font-size: 0.8em;
+}
+
+.orca-status-working {
+  color: #f28c28;
+}
+
+.orca-status-finished {
+  color: #48b96b;
+}
+
+.orca-status-unavailable {
+  color: #9a9a9a;
+}
+
+.orca-status-summary,
+.orca-status-workspace {
+  font-weight: 700;
+}
+
+.orca-status-totals {
+  color: #b8b8b8;
+  spacing: 12px;
+}
+
+.orca-status-total {
+  spacing: 4px;
+}
+
+.orca-status-total-icon {
+  font-size: 0.8em;
+}
+
+.orca-refresh-row {
+  spacing: 12px;
+}
+
+.orca-refresh-time {
+  color: #9a9a9a;
+  font-size: 0.8em;
+  font-style: italic;
+}
+
+.orca-agent-icon,
+.orca-close-button StIcon {
+  icon-size: 1em;
+}
+
+.orca-close-button {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  background-color: transparent;
+}
+
+.orca-close-button:hover,
+.orca-close-button:focus {
+  background-color: rgba(255, 255, 255, 0.12);
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TARGET_PATH="${1:-my-extension@your-domain.zip}"
+TARGET_PATH="${1:-orca-dev-status@navarrortiz.github.io.zip}"
 
 if [[ ! -d venv ]]; then
   virtualenv venv

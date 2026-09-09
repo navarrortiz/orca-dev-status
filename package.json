@@ -1,21 +1,24 @@
 {
-  "name": "gnome-extension-boilerplate",
+  "name": "orca-dev-status",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
-  "description": "Minimal GNOME Shell extension boilerplate",
+  "description": "GNOME Shell indicator for Orca agent status",
   "scripts": {
     "clean": "make clean",
     "compile": "make",
     "build": "npm run compile",
     "install:extension": "make install",
     "activate": "bash scripts/activate-extension.sh",
-    "deactivate": "gnome-extensions disable my-extension@your-domain || true",
-    "deactivate:old": "gnome-extensions disable one-thing@github.com || true",
+    "deactivate": "gnome-extensions disable orca-dev-status@navarrortiz.github.io || true",
     "reinstall": "npm run compile && npm run install:extension",
-    "dev": "npm run deactivate:old && npm run deactivate && npm run reinstall && npm run activate",
+    "dev": "make dev",
     "analyze:static": "bash scripts/static-analysis.sh",
-    "lint": "eslint 'src/**/*.js'",
-    "lint:fix": "eslint 'src/**/*.js' --fix"
+    "lint": "eslint extension.js prefs.js 'src/**/*.js' 'tests/**/*.js'",
+    "lint:fix": "eslint extension.js prefs.js 'src/**/*.js' 'tests/**/*.js' --fix",
+    "test": "node --test tests/status-model.test.js",
+    "test:integration": "node --test tests/orca-cli.integration.test.js",
+    "test:all": "npm test && npm run test:integration"
   },
   "devDependencies": {
     "eslint": "^10.10.0",

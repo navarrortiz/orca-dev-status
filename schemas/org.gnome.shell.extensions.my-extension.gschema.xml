@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.my-extension" path="/org/gnome/shell/extensions/my-extension/">
+    <key name="location-in-status-bar" type="i">
+      <default>0</default>
+      <range min="0" max="2"/>
+    </key>
+    <key name="index-in-status-bar" type="i">
+      <default>2</default>
+      <range min="-1" max="5"/>
+    </key>
+    <key name="poll-interval-seconds" type="i">
+      <default>5</default>
+      <range min="2" max="60"/>
+    </key>
+  </schema>
+</schemalist>

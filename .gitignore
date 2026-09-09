@@ -4,3 +4,7 @@ dist/
 schemas/gschemas.compiled
 /venv/
 /docs/checklist/
+/node_modules/
+/.idea/
+/.superpowers/
+/docs/planning-docs/

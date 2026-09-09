@@ -1,6 +1,6 @@
-.PHONY: build bundle clean install activate schemas
+.PHONY: build bundle clean install activate dev schemas
 
-UUID := my-extension@your-domain
+UUID := orca-dev-status@navarrortiz.github.io
 BUNDLE ?= $(UUID).zip
 ASSETS := $(wildcard assets/*)
 SCHEMAS := $(wildcard schemas/*.gschema.xml)
@@ -36,3 +36,6 @@ install: $(BUNDLE)
 
 activate:
 	bash scripts/activate-extension.sh "$(UUID)"
+
+dev: install
+	bash scripts/dev-extension.sh "$(UUID)"

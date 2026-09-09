@@ -1,6 +1,7 @@
-export const BOILERPLATE_STATUS_AREA_NAME = 'boilerplate';
+export const ORCA_STATUS_AREA_NAME = 'orca-dev-status';
 
 export const SETTINGS_KEYS = Object.freeze({
+  pollInterval: 'poll-interval-seconds',
   statusBarIndex: 'index-in-status-bar',
   statusBarLocation: 'location-in-status-bar',
 });

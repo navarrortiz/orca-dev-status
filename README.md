@@ -1,79 +1,93 @@
-# GNOME Shell Extension Boilerplate
+# Orca Dev Status
 
-This repository contains a working GNOME Shell extension (Shell 45+) and a boilerplate based on GJS ESM. Once installed, it displays `Hello word!` in the top bar.
+Extensión para GNOME Shell 45–50 que muestra en la barra superior el estado de
+los agentes administrados por Orca.
 
-## What's included
+## Indicador
 
-- `metadata.json` with the extension's `uuid` and basic metadata.
-- `extension.js` with the `enable/disable` lifecycle.
-- A `src/` directory containing:
-  - `extension/` for the extension controller.
-  - `ui/` for the panel UI.
-  - `shared/` for shared state utilities.
-- `scripts/build.sh`, `scripts/generate-gnome-extension.sh`, `scripts/install-extension.sh`, `scripts/activate-extension.sh`, and a `Makefile` for generating, installing, and activating the extension.
-- `stylesheet.css` with base styles.
+La barra muestra `🐋 <agentes activos> <estado>` con esta prioridad:
 
-## Quick start
+- `❓`: algún agente espera una respuesta.
+- `🔔`: algún agente requiere atención.
+- Punto naranja: hay agentes trabajando.
+- Punto verde: todos finalizaron o no existen agentes activos.
+- Punto gris: Orca no está disponible.
 
-1. Edit `metadata.json` if you plan to turn this boilerplate into a different extension:
-   - `uuid` (required and unique).
-   - `name` and `description`.
-   - `url` (optional but recommended).
-2. Build, install, and activate it:
+El menú incluye un resumen global, los agentes agrupados por workspace y la
+acción **Configuración**. No muestra prompts ni permite controlar agentes.
+
+## Requisitos
+
+- GNOME Shell 45 o posterior.
+- Mutter Development Kit en GNOME 49 o posterior (`mutter-devkit` en
+  Arch/Fedora, `mutter-dev-bin` en Ubuntu).
+- Orca abierto y el comando público `orca-ide` instalado.
+- Node.js para lint y pruebas.
+
+La extensión consulta cada cinco segundos:
+
+```bash
+orca-ide worktree ps --json
+```
+
+En Linux no usa el comando `orca`, porque puede corresponder al lector de
+pantalla de GNOME.
+
+## Desarrollo
+
+```bash
+npm install
+npm test
+npm run test:integration
+npm run lint
+npm run build
+```
+
+La prueba de integración requiere que Orca esté abierto y ejecuta el CLI real.
+
+Para probar cambios sin cerrar la sesión de Wayland, abre una instancia anidada
+de GNOME Shell:
+
+```bash
+npm run dev
+```
+
+El comando compila e instala la extensión, abre GNOME Shell en una ventana y la
+activa dentro de esa instancia. Como GNOME mantiene los módulos JavaScript en
+caché, después de editar el código cierra la ventana de prueba con `Ctrl+C` y
+vuelve a ejecutar el comando; la sesión principal permanece abierta.
+
+## Instalación local
 
 ```bash
 make install
 make activate
 ```
 
-You can also run `npm run dev`.
-
-## GNOME skill (starter template)
-
-To generate a copy of this boilerplate in another project:
+También puede compilarse el ZIP sin instalarlo:
 
 ```bash
-./scripts/generate-gnome-extension.sh /path/to/new/project my.extension@domain "My Extension"
+make bundle
 ```
 
-The script creates the base structure and replaces the `uuid` and name.
+La acción **Configuración** permite cambiar la zona y el índice del indicador
+en la barra. El UUID de la extensión es
+`orca-dev-status@navarrortiz.github.io`.
 
-## Local installation (optional)
+El repositorio incluye únicamente el XML fuente del schema. El archivo
+`schemas/gschemas.compiled` se genera durante el build y no se versiona.
 
-```bash
-gnome-extensions pack . --force --gresource --dest=~/.local/share/gnome-shell/extensions
-```
-
-```bash
-make install
-make schemas   # only if you add schemas/
-```
-
-To install and activate it quickly:
-
-```bash
-make install && ./scripts/activate-extension.sh my.extension@domain
-```
-
-Alternatively, install the generated ZIP using your preferred method.
-
-## Structure
+## Estructura
 
 ```text
 ├── extension.js
-├── metadata.json
-├── stylesheet.css
-├── Makefile
-├── scripts/
-│   ├── activate-extension.sh
-│   ├── build.sh
-│   ├── generate-gnome-extension.sh
-│   └── install-extension.sh
-└── src/
-    ├── extension/
-    │   └── controller.js
-    ├── ui/
-    │   └── indicator.js
-    └── shared/
-        └── constants.js
+├── prefs.js
+├── schemas/
+├── src/
+│   ├── extension/    # lifecycle y polling
+│   ├── orca/         # cliente del CLI y modelo puro
+│   ├── prefs/        # preferencias de posición
+│   ├── shared/       # constantes
+│   └── ui/           # indicador y menú
+└── tests/            # pruebas unitarias e integración real
 ```

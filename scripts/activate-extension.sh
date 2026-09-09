@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-UUID="${1:-my-extension@your-domain}"
+UUID="${1:-orca-dev-status@navarrortiz.github.io}"
 
 if gnome-extensions info "${UUID}" >/dev/null 2>&1; then
   gnome-extensions enable "${UUID}"
