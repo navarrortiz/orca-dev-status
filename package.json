@@ -16,7 +16,7 @@
     "analyze:static": "bash scripts/static-analysis.sh",
     "lint": "eslint extension.js prefs.js 'src/**/*.js' 'tests/**/*.js'",
     "lint:fix": "eslint extension.js prefs.js 'src/**/*.js' 'tests/**/*.js' --fix",
-    "test": "node --test tests/status-model.test.js",
+    "test": "node --test tests/status-model.test.js tests/session-resources.test.js",
     "test:integration": "node --test tests/orca-cli.integration.test.js",
     "test:all": "npm test && npm run test:integration"
   },

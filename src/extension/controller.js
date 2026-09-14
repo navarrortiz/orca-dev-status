@@ -1,6 +1,7 @@
 import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import OrcaClient from '../orca/client.js';
+import { SessionResourceService } from '../orca/session-resources.js';
 import { unavailableStatus } from '../orca/status-model.js';
 import {
   ORCA_STATUS_AREA_NAME,
@@ -16,6 +17,7 @@ export default class ExtensionController {
     this._settings = null;
     this._settingsSignals = [];
     this._client = null;
+    this._resources = null;
     this._pollId = 0;
     this._polling = false;
     this._refreshPending = false;
@@ -27,6 +29,7 @@ export default class ExtensionController {
   enable() {
     this._enabled = true;
     this._client = new OrcaClient();
+    this._resources = new SessionResourceService(this._client);
     this._settings = this._extension.getSettings();
     this._settingsSignals = [
       this._settings.connect(
@@ -69,6 +72,7 @@ export default class ExtensionController {
       () => this._client.open(),
       agent => this._switchAgent(agent),
       agent => this._closeAgent(agent),
+      paneKey => this._resources.get(paneKey),
     );
     Main.panel.addToStatusArea(
       ORCA_STATUS_AREA_NAME,
@@ -101,10 +105,10 @@ export default class ExtensionController {
       this._polling = false;
       if (this._enabled) {
         this._updatedAt = GLib.DateTime.new_now_local().format('%H:%M:%S');
-        this._indicator?.update(this._snapshot, this._updatedAt);
+        this._indicator?.update(this._snapshot, this._updatedAt, force);
         if (this._refreshPending) {
           this._refreshPending = false;
-          this._poll();
+          this._poll(true);
         }
       }
     }
@@ -126,6 +130,7 @@ export default class ExtensionController {
       this._pollId = 0;
     }
     this._client?.cancel();
+    this._resources?.clear();
     this._refreshPending = false;
 
     for (const signalId of this._settingsSignals)
@@ -136,6 +141,7 @@ export default class ExtensionController {
     this._indicator = null;
     this._settings = null;
     this._client = null;
+    this._resources = null;
     this._snapshot = unavailableStatus();
     this._updatedAt = null;
   }

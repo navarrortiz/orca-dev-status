@@ -69,3 +69,66 @@
 .orca-close-button:focus {
   background-color: rgba(255, 255, 255, 0.12);
 }
+
+.orca-session-card {
+  width: 420px;
+  padding: 14px;
+  spacing: 8px;
+  border-radius: 12px;
+  background-color: rgba(32, 32, 32, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 14px 4px rgba(0, 0, 0, 0.35);
+}
+
+.orca-session-card-header,
+.orca-session-card-section-header,
+.orca-session-card-resources,
+.orca-session-card-resource,
+.orca-session-card-detail {
+  spacing: 7px;
+}
+
+.orca-session-card-title,
+.orca-session-card-section-title {
+  font-weight: 700;
+}
+
+.orca-session-card-status,
+.orca-session-card-muted {
+  color: #b8b8b8;
+  font-size: 0.85em;
+}
+
+.orca-session-card-section-title {
+  margin-top: 3px;
+  font-size: 0.9em;
+}
+
+.orca-session-card-section-date {
+  color: #9a9a9a;
+  font-size: 0.78em;
+}
+
+.orca-session-card-text {
+  color: #eeeeec;
+  font-size: 0.9em;
+}
+
+.orca-session-card-resources {
+  margin-top: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.orca-session-card-resource {
+  margin-right: 10px;
+}
+
+.orca-session-card-resource-text {
+  font-size: 0.85em;
+}
+
+.orca-session-card-icon {
+  icon-size: 13px;
+}

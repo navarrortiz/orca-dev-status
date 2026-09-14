@@ -13,7 +13,11 @@ test('consulta Orca real a través del cliente GJS', { timeout: 15000 }, async (
   (async () => {
     try {
       const { default: OrcaClient } = await import('${client}');
-      print(JSON.stringify(await new OrcaClient().fetchStatus()));
+      const client = new OrcaClient();
+      print(JSON.stringify({
+        status: await client.fetchStatus(),
+        resources: [...(await client.fetchResources()).entries()],
+      }));
     } catch (error) {
       printerr(error.stack ?? error);
       imports.system.exit(1);
@@ -26,8 +30,14 @@ test('consulta Orca real a través del cliente GJS', { timeout: 15000 }, async (
     timeout: 10000,
     maxBuffer: 5 * 1024 * 1024,
   });
-  const snapshot = JSON.parse(stdout);
+  const result = JSON.parse(stdout);
 
-  assert.equal(snapshot.available, true);
-  assert.ok(Array.isArray(snapshot.workspaces));
+  assert.equal(result.status.available, true);
+  assert.ok(Array.isArray(result.status.workspaces));
+  assert.ok(Array.isArray(result.resources));
+  for (const [paneKey, resources] of result.resources) {
+    assert.equal(typeof paneKey, 'string');
+    assert.ok(resources.cpu === null || Number.isFinite(resources.cpu));
+    assert.ok(resources.memory === null || Number.isFinite(resources.memory));
+  }
 });

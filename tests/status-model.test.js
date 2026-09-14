@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   AGENT_STATUS,
   normalizeOrcaResponse,
+  normalizeTerminalTitles,
   requiresCloseConfirmation,
   unavailableStatus,
 } from '../src/orca/status-model.js';
@@ -60,14 +61,44 @@ test('normaliza workspaces, títulos y prioridad global', () => {
   assert.deepEqual(snapshot.workspaces[0].agents[0], {
     name: 'Diseño',
     type: 'claude',
+    model: null,
     paneKey: 'tab:leaf',
     status: AGENT_STATUS.QUESTION,
+    prompt: 'dato privado',
+    lastAssistantMessage: '',
+    toolName: 'request_user_input',
+    stateStartedAt: null,
+    updatedAt: null,
   });
   assert.deepEqual(snapshot.workspaces[1].agents.map(agent => agent.name), [
     'Corrige el endpoint de usuarios',
     'codex',
   ]);
-  assert.doesNotMatch(JSON.stringify(snapshot), /dato privado/);
+  assert.match(JSON.stringify(snapshot), /dato privado/);
+});
+
+test('conserva los detalles técnicos disponibles para la tarjeta', () => {
+  const snapshot = normalizeOrcaResponse(response([{
+    displayName: 'proyecto',
+    agents: [{
+      agentType: 'codex',
+      modelName: 'gpt-5',
+      prompt: 'último prompt',
+      lastAssistantMessage: 'respuesta reciente',
+      toolName: 'Bash',
+      state: 'working',
+      stateStartedAt: 1000,
+      updatedAt: 2000,
+    }],
+  }]));
+  const [agent] = snapshot.workspaces[0].agents;
+
+  assert.equal(agent.model, 'gpt-5');
+  assert.equal(agent.prompt, 'último prompt');
+  assert.equal(agent.lastAssistantMessage, 'respuesta reciente');
+  assert.equal(agent.toolName, 'Bash');
+  assert.equal(agent.stateStartedAt, 1000);
+  assert.equal(agent.updatedAt, 2000);
 });
 
 test('confirma el cierre solo cuando la sesión requiere atención', () => {
@@ -130,6 +161,38 @@ test('conserva el primer prompt observado para cada sesión', () => {
   );
 
   assert.equal(snapshot.workspaces[0].agents[0].name, 'Primer prompt');
+});
+
+test('prefiere el título limpio de la sesión y conserva los fallbacks', () => {
+  const terminalTitles = normalizeTerminalTitles({
+    result: {
+      terminals: [
+        {
+          tabId: 'tab',
+          leafId: 'leaf',
+          title: '⠙ Actualizar listado de sesiones | orca-dev-status',
+        },
+        { tabId: 'empty', leafId: 'leaf', title: '   ' },
+      ],
+    },
+  });
+  const snapshot = normalizeOrcaResponse(response([{
+    displayName: 'proyecto',
+    agents: [
+      {
+        paneKey: 'tab:leaf',
+        displayName: 'Nombre anterior',
+        prompt: 'primer prompt',
+        state: 'working',
+      },
+      { paneKey: 'missing:leaf', prompt: 'fallback', state: 'done' },
+    ],
+  }]), new Map(), terminalTitles);
+
+  assert.deepEqual(snapshot.workspaces[0].agents.map(agent => agent.name), [
+    'Actualizar listado de sesiones',
+    'Fallback',
+  ]);
 });
 
 test('aplica atención antes de trabajo y trata estados desconocidos como atención', () => {

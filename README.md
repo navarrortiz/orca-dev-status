@@ -14,7 +14,10 @@ La barra muestra `🐋 <agentes activos> <estado>` con esta prioridad:
 - Punto gris: Orca no está disponible.
 
 El menú incluye un resumen global, los agentes agrupados por workspace y la
-acción **Configuración**. No muestra prompts ni permite controlar agentes.
+acción **Configuración**. Al mantener el puntero sobre una sesión muestra su
+prompt, actividad reciente y consumo de CPU/memoria obtenido bajo demanda. Las
+filas permiten abrir o cerrar sesiones, con confirmación cuando requieren
+atención.
 
 ## Requisitos
 

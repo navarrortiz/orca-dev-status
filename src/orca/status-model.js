@@ -51,7 +51,7 @@ function classifyAgent(agent) {
   return AGENT_STATUS.ATTENTION;
 }
 
-function agentName(agent, firstPrompts) {
+function agentName(agent, firstPrompts, terminalTitles) {
   const prompt = String(agent.prompt ?? '')
     .trim()
     .split(/\r?\n/, 1)[0]
@@ -65,12 +65,28 @@ function agentName(agent, firstPrompts) {
       firstPrompts.set(agent.paneKey, normalizedPrompt);
     normalizedPrompt = firstPrompts.get(agent.paneKey);
   }
-  const name = agent.displayName || agent.taskTitle || normalizedPrompt ||
-    agent.agentType || 'Agente';
+  const name = terminalTitles?.get(agent.paneKey) || agent.displayName ||
+    agent.taskTitle || normalizedPrompt || agent.agentType || 'Agente';
   const firstLine = String(name).trim().split(/\r?\n/, 1)[0];
   return firstLine.length > MAX_AGENT_NAME_LENGTH
     ? `${firstLine.slice(0, MAX_AGENT_NAME_LENGTH - 1)}…`
     : firstLine;
+}
+
+export function normalizeTerminalTitles(payload) {
+  const titles = new Map();
+  for (const terminal of payload?.result?.terminals ?? []) {
+    if (!terminal?.tabId || !terminal?.leafId)
+      continue;
+
+    const title = String(terminal.title ?? '')
+      .replace(/^[\u2800-\u28ff]\s+/, '')
+      .replace(/\s+\|\s+[^|]+$/, '')
+      .trim();
+    if (title)
+      titles.set(`${terminal.tabId}:${terminal.leafId}`, title);
+  }
+  return titles;
 }
 
 function workspaceName(workspace) {
@@ -104,7 +120,7 @@ function highestStatus(counts) {
   return AGENT_STATUS.FINISHED;
 }
 
-export function normalizeOrcaResponse(payload, firstPrompts) {
+export function normalizeOrcaResponse(payload, firstPrompts, terminalTitles) {
   if (!payload || payload.ok !== true || !Array.isArray(payload.result?.worktrees))
     throw new Error('Respuesta inválida de Orca');
 
@@ -113,10 +129,18 @@ export function normalizeOrcaResponse(payload, firstPrompts) {
       return [];
 
     const agents = workspace.agents.map(agent => ({
-      name: agentName(agent, firstPrompts),
+      name: agentName(agent, firstPrompts, terminalTitles),
       type: String(agent.agentType ?? 'agent').toLowerCase(),
+      model: agent.model ?? agent.modelName ?? null,
       paneKey: agent.paneKey ?? null,
       status: classifyAgent(agent),
+      prompt: String(agent.prompt ?? '').trim(),
+      lastAssistantMessage: String(agent.lastAssistantMessage ?? '').trim(),
+      toolName: agent.toolName ?? null,
+      stateStartedAt: Number.isFinite(agent.stateStartedAt)
+        ? agent.stateStartedAt
+        : null,
+      updatedAt: Number.isFinite(agent.updatedAt) ? agent.updatedAt : null,
     }));
     const counts = countsFor(agents);
     return [{

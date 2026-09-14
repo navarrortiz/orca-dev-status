@@ -1,5 +1,6 @@
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -12,6 +13,7 @@ import {
   AGENT_STATUS,
   requiresCloseConfirmation,
 } from '../orca/status-model.js';
+import { SessionHoverCard } from './session-hover-card.js';
 
 const PRESENTATION = Object.freeze({
   [AGENT_STATUS.QUESTION]: ['❓', 'Pregunta pendiente', 'orca-status-question'],
@@ -29,7 +31,14 @@ export const OrcaIndicator = GObject.registerClass({
   GTypeName: 'OrcaDevStatusIndicator',
 },
 class OrcaIndicator extends PanelMenu.Button {
-  _init(extension, onRefresh, onOpenOrca, onOpenAgent, onCloseAgent) {
+  _init(
+    extension,
+    onRefresh,
+    onOpenOrca,
+    onOpenAgent,
+    onCloseAgent,
+    onLoadSessionResources,
+  ) {
     super._init(0.5, extension.metadata.name, false);
 
     this._box = new St.BoxLayout({
@@ -53,10 +62,34 @@ class OrcaIndicator extends PanelMenu.Button {
     this._onOpenOrca = onOpenOrca;
     this._onOpenAgent = onOpenAgent;
     this._onCloseAgent = onCloseAgent;
+    this._onLoadSessionResources = onLoadSessionResources;
+    this._hoverTimeoutId = 0;
+    this._hoverCard = new SessionHoverCard(extension);
+    this._menuOpen = false;
+    this._pendingMenuUpdate = null;
+    this.menu.connect('open-state-changed', (_menu, open) => {
+      this._menuOpen = open;
+      if (open) {
+        return;
+      }
+
+      this._cancelHover();
+
+      if (this._pendingMenuUpdate) {
+        const { snapshot, updatedAt } = this._pendingMenuUpdate;
+        this._pendingMenuUpdate = null;
+        this._renderMenu(snapshot, updatedAt);
+      }
+    });
+    this.connect('destroy', () => {
+      this._cancelHover();
+      this._hoverCard?.destroy();
+      this._hoverCard = null;
+    });
     this.update({ available: false, totalCount: 0, status: null });
   }
 
-  update(snapshot, updatedAt = null) {
+  update(snapshot, updatedAt = null, refreshOpenMenu = false) {
     const [icon, label, styleClass] =
       PRESENTATION[snapshot.status ?? 'unavailable'];
     const priorityCount = snapshot.counts?.[snapshot.status] ?? 0;
@@ -65,10 +98,21 @@ class OrcaIndicator extends PanelMenu.Button {
     this._statusLabel.set_style_class_name(`orca-status-icon ${styleClass}`);
     this.accessible_name =
       `Orca: ${priorityCount} agentes. ${label}`;
+
+    // Rebuilding PopupMenu items while it is open destroys the item under
+    // the pointer and also hides the hover card. Apply the newest snapshot
+    // after the menu closes instead.
+    if (this._menuOpen && !refreshOpenMenu) {
+      this._pendingMenuUpdate = { snapshot, updatedAt };
+      return;
+    }
+
+    this._pendingMenuUpdate = null;
     this._renderMenu(snapshot, updatedAt);
   }
 
   _renderMenu(snapshot, updatedAt) {
+    this._cancelHover();
     this.menu.removeAll();
 
     if (!snapshot.available) {
@@ -181,6 +225,14 @@ class OrcaIndicator extends PanelMenu.Button {
             if (!actor || !closeButton.contains(actor))
               this._openAgent(target);
           });
+          item.connect('enter-event', () => {
+            this._scheduleHover(target, item);
+            return Clutter.EVENT_PROPAGATE;
+          });
+          item.connect('leave-event', () => {
+            this._cancelHover();
+            return Clutter.EVENT_PROPAGATE;
+          });
           item.add_child(closeButton);
           this.menu.addMenuItem(item);
         }
@@ -211,6 +263,30 @@ class OrcaIndicator extends PanelMenu.Button {
 
     this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
     this.menu.addAction('Configuración', () => this._extension.openPreferences());
+  }
+
+  _scheduleHover(agent, item) {
+    this._cancelHover();
+    this._hoverTimeoutId = GLib.timeout_add(
+      GLib.PRIORITY_DEFAULT,
+      250,
+      () => {
+        this._hoverTimeoutId = 0;
+        const token = this._hoverCard.show(agent, item);
+        this._onLoadSessionResources(agent.paneKey)
+          .then(resources => this._hoverCard?.setResources(token, resources))
+          .catch(() => this._hoverCard?.setResources(token, null, true));
+        return GLib.SOURCE_REMOVE;
+      },
+    );
+  }
+
+  _cancelHover() {
+    if (this._hoverTimeoutId) {
+      GLib.source_remove(this._hoverTimeoutId);
+      this._hoverTimeoutId = 0;
+    }
+    this._hoverCard?.hide();
   }
 
   async _openOrca() {

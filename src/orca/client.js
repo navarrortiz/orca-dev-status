@@ -1,7 +1,11 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-import { normalizeOrcaResponse } from './status-model.js';
+import {
+  normalizeOrcaResponse,
+  normalizeTerminalTitles,
+} from './status-model.js';
+import { normalizeResourceResponse } from './session-resources.js';
 
 Gio._promisify(
   Gio.Subprocess.prototype,
@@ -12,6 +16,7 @@ Gio._promisify(
 const TIMEOUT_MS = 4000;
 const OPEN_TIMEOUT_MS = 15000;
 const CLOSE_TIMEOUT_MS = 8000;
+const RESOURCE_TIMEOUT_MS = 8000;
 
 function findCli() {
   const fromPath = GLib.find_program_in_path('orca-ide');
@@ -72,10 +77,21 @@ export default class OrcaClient {
   }
 
   async fetchStatus() {
+    const [status, terminals] = await Promise.all([
+      this._run(['worktree', 'ps', '--json']),
+      this._run(['terminal', 'list', '--json']).catch(() => null),
+    ]);
     return normalizeOrcaResponse(
-      await this._run(['worktree', 'ps', '--json']),
+      status,
       this._firstPrompts,
+      normalizeTerminalTitles(terminals),
     );
+  }
+
+  async fetchResources() {
+    return normalizeResourceResponse(await this._run([
+      'diagnostics', 'memory', '--json',
+    ], RESOURCE_TIMEOUT_MS));
   }
 
   async open() {
