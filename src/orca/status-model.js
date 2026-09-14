@@ -75,7 +75,8 @@ function agentName(agent, firstPrompts, terminalTitles) {
 
 export function normalizeTerminalTitles(payload) {
   const titles = new Map();
-  for (const terminal of payload?.result?.terminals ?? []) {
+  const terminals = payload?.result?.terminals ?? [];
+  for (const terminal of terminals) {
     if (!terminal?.tabId || !terminal?.leafId)
       continue;
 
@@ -84,6 +85,20 @@ export function normalizeTerminalTitles(payload) {
       .replace(/\s+\|\s+[^|]+$/, '')
       .trim();
     if (title)
+      titles.set(`${terminal.tabId}:${terminal.leafId}`, title);
+  }
+
+  const tabTitles = new Map();
+  for (const layout of payload?.result?.visualLayouts ?? []) {
+    for (const tab of layout?.root?.tabs ?? []) {
+      const title = String(tab?.title ?? '').trim();
+      if (tab?.tabId && title)
+        tabTitles.set(tab.tabId, title);
+    }
+  }
+  for (const terminal of terminals) {
+    const title = tabTitles.get(terminal?.tabId);
+    if (title && terminal?.leafId)
       titles.set(`${terminal.tabId}:${terminal.leafId}`, title);
   }
   return titles;

@@ -79,7 +79,9 @@ export default class OrcaClient {
   async fetchStatus() {
     const [status, terminals] = await Promise.all([
       this._run(['worktree', 'ps', '--json']),
-      this._run(['terminal', 'list', '--json']).catch(() => null),
+      this._run([
+        'terminal', 'list', '--include-visual-layouts', '--json',
+      ]).catch(() => null),
     ]);
     return normalizeOrcaResponse(
       status,

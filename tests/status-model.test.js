@@ -163,17 +163,22 @@ test('conserva el primer prompt observado para cada sesión', () => {
   assert.equal(snapshot.workspaces[0].agents[0].name, 'Primer prompt');
 });
 
-test('prefiere el título limpio de la sesión y conserva los fallbacks', () => {
+test('prefiere el título manual de la terminal sobre el nombre de sesión', () => {
   const terminalTitles = normalizeTerminalTitles({
     result: {
       terminals: [
         {
           tabId: 'tab',
           leafId: 'leaf',
-          title: '⠙ Actualizar listado de sesiones | orca-dev-status',
+          title: '⠙ Nombre de sesión | orca-dev-status',
         },
         { tabId: 'empty', leafId: 'leaf', title: '   ' },
       ],
+      visualLayouts: [{
+        root: {
+          tabs: [{ tabId: 'tab', title: 'Título manual' }],
+        },
+      }],
     },
   });
   const snapshot = normalizeOrcaResponse(response([{
@@ -181,7 +186,7 @@ test('prefiere el título limpio de la sesión y conserva los fallbacks', () => 
     agents: [
       {
         paneKey: 'tab:leaf',
-        displayName: 'Nombre anterior',
+        displayName: 'Nombre de sesión',
         prompt: 'primer prompt',
         state: 'working',
       },
@@ -190,7 +195,7 @@ test('prefiere el título limpio de la sesión y conserva los fallbacks', () => 
   }]), new Map(), terminalTitles);
 
   assert.deepEqual(snapshot.workspaces[0].agents.map(agent => agent.name), [
-    'Actualizar listado de sesiones',
+    'Título manual',
     'Fallback',
   ]);
 });
