@@ -39,6 +39,7 @@ class OrcaIndicator extends PanelMenu.Button {
     onCloseAgent,
     onCreateAgent,
     onLoadSessionResources,
+    onLoadSessionDetails,
   ) {
     super._init(0.5, extension.metadata.name, false);
 
@@ -65,6 +66,7 @@ class OrcaIndicator extends PanelMenu.Button {
     this._onCloseAgent = onCloseAgent;
     this._onCreateAgent = onCreateAgent;
     this._onLoadSessionResources = onLoadSessionResources;
+    this._onLoadSessionDetails = onLoadSessionDetails;
     this._hoverTimeoutId = 0;
     this._hoverCard = new SessionHoverCard(extension);
     this._menuOpen = false;
@@ -292,6 +294,11 @@ class OrcaIndicator extends PanelMenu.Button {
         this._onLoadSessionResources(agent.paneKey)
           .then(resources => this._hoverCard?.setResources(token, resources))
           .catch(() => this._hoverCard?.setResources(token, null, true));
+        if (!agent.model || !agent.effort) {
+          this._onLoadSessionDetails(agent)
+            .then(details => this._hoverCard?.setIdentity(token, agent, details))
+            .catch(() => {});
+        }
         return GLib.SOURCE_REMOVE;
       },
     );

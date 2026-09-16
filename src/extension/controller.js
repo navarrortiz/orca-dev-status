@@ -74,6 +74,10 @@ export default class ExtensionController {
       agent => this._closeAgent(agent),
       workspace => this._createAgent(workspace),
       paneKey => this._resources.get(paneKey),
+      agent => this._client.fetchSessionDetails(
+        agent.worktreeId,
+        agent.paneKey,
+      ),
     );
     Main.panel.addToStatusArea(
       ORCA_STATUS_AREA_NAME,

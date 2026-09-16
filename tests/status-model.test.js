@@ -62,13 +62,17 @@ test('normaliza workspaces, títulos y prioridad global', () => {
   assert.equal(snapshot.workspaces[1].latestAgentType, 'codex');
   assert.deepEqual(snapshot.workspaces[0].agents[0], {
     name: 'Diseño',
+    firstPrompt: 'Dato privado',
     type: 'claude',
     model: null,
+    effort: null,
     paneKey: 'tab:leaf',
     status: AGENT_STATUS.QUESTION,
     prompt: 'dato privado',
-    lastAssistantMessage: '',
+    activity: '',
+    activityAt: null,
     toolName: 'request_user_input',
+    sessionStartedAt: null,
     stateStartedAt: null,
     updatedAt: null,
   });
@@ -79,15 +83,19 @@ test('normaliza workspaces, títulos y prioridad global', () => {
   assert.match(JSON.stringify(snapshot), /dato privado/);
 });
 
-test('conserva los detalles técnicos disponibles para la tarjeta', () => {
+test('conserva los detalles técnicos y el inicio disponibles para la tarjeta', () => {
   const snapshot = normalizeOrcaResponse(response([{
     displayName: 'proyecto',
     agents: [{
       agentType: 'codex',
       modelName: 'gpt-5',
+      reasoningEffort: 'medium',
       prompt: 'último prompt',
       lastAssistantMessage: 'respuesta reciente',
+      turnCompletedAt: 1500,
       toolName: 'Bash',
+      toolInput: 'npm test',
+      createdAt: 500,
       state: 'working',
       stateStartedAt: 1000,
       updatedAt: 2000,
@@ -96,11 +104,45 @@ test('conserva los detalles técnicos disponibles para la tarjeta', () => {
   const [agent] = snapshot.workspaces[0].agents;
 
   assert.equal(agent.model, 'gpt-5');
+  assert.equal(agent.effort, 'medium');
+  assert.equal(agent.firstPrompt, 'Último prompt');
   assert.equal(agent.prompt, 'último prompt');
-  assert.equal(agent.lastAssistantMessage, 'respuesta reciente');
+  assert.equal(agent.activity, 'npm test');
+  assert.equal(agent.activityAt, 2000);
   assert.equal(agent.toolName, 'Bash');
+  assert.equal(agent.sessionStartedAt, 500);
   assert.equal(agent.stateStartedAt, 1000);
   assert.equal(agent.updatedAt, 2000);
+});
+
+test('usa la última respuesta como actividad cuando el agente terminó', () => {
+  const snapshot = normalizeOrcaResponse(response([{
+    displayName: 'proyecto',
+    agents: [{
+      state: 'done',
+      toolInput: 'actividad anterior',
+      lastAssistantMessage: 'respuesta final',
+      turnCompletedAt: 1500,
+      updatedAt: 2000,
+    }],
+  }]));
+  const [agent] = snapshot.workspaces[0].agents;
+
+  assert.equal(agent.activity, 'respuesta final');
+  assert.equal(agent.activityAt, 1500);
+});
+
+test('mantiene el inicio global aunque el agente cambie de estado', () => {
+  const starts = new Map();
+  const worktree = stateStartedAt => response([{
+    displayName: 'proyecto',
+    agents: [{ paneKey: 'tab:leaf', state: 'working', stateStartedAt }],
+  }]);
+
+  normalizeOrcaResponse(worktree(1000), null, null, starts);
+  const snapshot = normalizeOrcaResponse(worktree(2000), null, null, starts);
+
+  assert.equal(snapshot.workspaces[0].agents[0].sessionStartedAt, 1000);
 });
 
 test('confirma el cierre solo cuando la sesión requiere atención', () => {
@@ -134,6 +176,18 @@ test('acorta el título de sesión a una sola línea', () => {
   assert.doesNotMatch(agent.name, /contenido adicional/);
 });
 
+test('conserva hasta tres líneas de contenido del primer prompt', () => {
+  const prompt = `${'Resumen largo '.repeat(20)}\ntercera línea`;
+  const snapshot = normalizeOrcaResponse(response([{
+    displayName: 'proyecto',
+    agents: [{ prompt, state: 'working' }],
+  }]));
+  const [agent] = snapshot.workspaces[0].agents;
+
+  assert.equal(agent.firstPrompt.length, 180);
+  assert.match(agent.firstPrompt, /…$/);
+});
+
 test('presenta los prompts como los nombres de sesión de Orca', () => {
   const snapshot = normalizeOrcaResponse(response([{
     displayName: 'proyecto',
@@ -163,6 +217,7 @@ test('conserva el primer prompt observado para cada sesión', () => {
   );
 
   assert.equal(snapshot.workspaces[0].agents[0].name, 'Primer prompt');
+  assert.equal(snapshot.workspaces[0].agents[0].firstPrompt, 'Primer prompt');
 });
 
 test('prefiere el título manual de la terminal sobre el nombre de sesión', () => {

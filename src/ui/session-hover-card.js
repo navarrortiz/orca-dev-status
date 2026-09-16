@@ -30,6 +30,13 @@ function formatDate(timestamp) {
   return `hace ${formatDuration(Date.now() - timestamp)} · ${date.format('%d %b, %H:%M')}`;
 }
 
+function formatStartDate(timestamp) {
+  if (!Number.isFinite(timestamp))
+    return null;
+  return GLib.DateTime.new_from_unix_local(Math.floor(timestamp / 1000))
+    .format('%d %b, %H:%M');
+}
+
 export class SessionHoverCard {
   constructor(extension) {
     this._extension = extension;
@@ -49,26 +56,35 @@ export class SessionHoverCard {
   show(agent, anchor) {
     const token = ++this._token;
     this._anchor = anchor;
+    this._modelLabel = null;
     this.actor.remove_all_children();
     this.actor.accessible_name = `Detalles de ${agent.name}`;
 
     const header = new St.BoxLayout({ style_class: 'orca-session-card-header' });
     header.add_child(new St.Label({
       text: agent.name,
-      x_expand: true,
       style_class: 'orca-session-card-title',
     }));
+    this._modelLabel = this._label(
+      this._model(agent),
+      'orca-session-card-muted',
+    );
+    this._modelLabel.x_expand = true;
+    header.add_child(this._modelLabel);
     header.add_child(new St.Label({
       text: STATUS_LABELS[agent.status] ?? agent.status,
       style_class: `orca-session-card-status orca-status-${agent.status}`,
     }));
     this.actor.add_child(header);
 
-    const identity = [agent.type, agent.model].filter(Boolean).join(' · ');
-    if (identity)
-      this.actor.add_child(this._label(identity, 'orca-session-card-muted'));
-    this._addTextBlock('Último prompt', agent.prompt, agent.updatedAt);
-    this._addTextBlock('Última respuesta', agent.lastAssistantMessage, agent.updatedAt);
+    if (agent.firstPrompt) {
+      const summary = this._label(agent.firstPrompt, 'orca-session-card-muted');
+      summary.add_style_class_name('orca-session-card-summary');
+      summary.clip_to_allocation = true;
+      summary.clutter_text.set_line_wrap(true);
+      this.actor.add_child(summary);
+    }
+    this._addTextBlock('Última actividad', agent.activity, agent.activityAt);
 
     this._resources = new St.BoxLayout({
       style_class: 'orca-session-card-resources',
@@ -81,15 +97,19 @@ export class SessionHoverCard {
 
     if (agent.toolName)
       this.actor.add_child(this._detail('tool-symbolic.svg', 'Herramienta', agent.toolName));
+    const sessionStart = formatStartDate(agent.sessionStartedAt);
+    if (sessionStart)
+      this.actor.add_child(this._detail('clock-symbolic.svg', 'Inicio', sessionStart));
+    const totalDuration = Number.isFinite(agent.sessionStartedAt)
+      ? formatDuration(Date.now() - agent.sessionStartedAt)
+      : null;
+    if (totalDuration)
+      this.actor.add_child(this._detail('clock-symbolic.svg', 'Tiempo total', totalDuration));
     const stateDuration = Number.isFinite(agent.stateStartedAt)
       ? formatDuration(Date.now() - agent.stateStartedAt)
       : null;
     if (stateDuration)
       this.actor.add_child(this._detail('clock-symbolic.svg', 'En este estado', stateDuration));
-    const activity = formatDate(agent.updatedAt);
-    if (activity)
-      this.actor.add_child(this._detail('clock-symbolic.svg', 'Actividad', activity));
-
     this.actor.opacity = 0;
     this.actor.show();
     this._queuePosition();
@@ -129,6 +149,18 @@ export class SessionHoverCard {
     this._queuePosition();
   }
 
+  setIdentity(token, agent, details) {
+    if (token !== this._token || !this.actor.visible || !this._modelLabel)
+      return;
+
+    this._modelLabel.text = this._model({
+      ...agent,
+      model: details?.model ?? agent.model,
+      effort: details?.effort ?? agent.effort,
+    });
+    this._queuePosition();
+  }
+
   hide() {
     this._token++;
     this._anchor = null;
@@ -161,6 +193,10 @@ export class SessionHoverCard {
     const label = this._label(text, 'orca-session-card-text');
     label.clutter_text.set_line_wrap(true);
     this.actor.add_child(label);
+  }
+
+  _model(agent) {
+    return [agent.model, agent.effort].filter(Boolean).join(' ');
   }
 
   _label(text, styleClass) {

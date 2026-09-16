@@ -99,6 +99,10 @@
   font-size: 0.85em;
 }
 
+.orca-session-card-summary {
+  max-height: 3.2em;
+}
+
 .orca-session-card-section-title {
   margin-top: 3px;
   font-size: 0.9em;

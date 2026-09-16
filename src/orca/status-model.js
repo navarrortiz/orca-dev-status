@@ -27,6 +27,7 @@ const ATTENTION_STATES = new Set([
   'waiting',
 ]);
 const MAX_AGENT_NAME_LENGTH = 60;
+const MAX_FIRST_PROMPT_LENGTH = 180;
 
 function classifyAgent(agent) {
   const state = String(agent.state ?? '').toLowerCase();
@@ -51,12 +52,12 @@ function classifyAgent(agent) {
   return AGENT_STATUS.ATTENTION;
 }
 
-function agentName(agent, firstPrompts, terminalTitles) {
+function agentDetails(agent, firstPrompts, terminalTitles) {
   const prompt = String(agent.prompt ?? '')
     .trim()
-    .split(/\r?\n/, 1)[0]
     .replace(/\[Image #(\d+)\]/g, 'Image $1')
-    .replace(/\s+/g, ' ');
+    .replace(/[^\S\r\n]+/g, ' ')
+    .replace(/\s*\r?\n\s*/g, '\n');
   let normalizedPrompt = prompt
     ? `${prompt[0].toUpperCase()}${prompt.slice(1)}`
     : '';
@@ -65,12 +66,18 @@ function agentName(agent, firstPrompts, terminalTitles) {
       firstPrompts.set(agent.paneKey, normalizedPrompt);
     normalizedPrompt = firstPrompts.get(agent.paneKey);
   }
+  const promptTitle = normalizedPrompt.split(/\r?\n/, 1)[0];
   const name = terminalTitles?.get(agent.paneKey) || agent.displayName ||
-    agent.taskTitle || normalizedPrompt || agent.agentType || 'Agente';
+    agent.taskTitle || promptTitle || agent.agentType || 'Agente';
   const firstLine = String(name).trim().split(/\r?\n/, 1)[0];
-  return firstLine.length > MAX_AGENT_NAME_LENGTH
-    ? `${firstLine.slice(0, MAX_AGENT_NAME_LENGTH - 1)}…`
-    : firstLine;
+  return {
+    name: firstLine.length > MAX_AGENT_NAME_LENGTH
+      ? `${firstLine.slice(0, MAX_AGENT_NAME_LENGTH - 1)}…`
+      : firstLine,
+    firstPrompt: normalizedPrompt.length > MAX_FIRST_PROMPT_LENGTH
+      ? `${normalizedPrompt.slice(0, MAX_FIRST_PROMPT_LENGTH - 1)}…`
+      : normalizedPrompt,
+  };
 }
 
 export function normalizeTerminalTitles(payload) {
@@ -135,28 +142,72 @@ function highestStatus(counts) {
   return AGENT_STATUS.FINISHED;
 }
 
-export function normalizeOrcaResponse(payload, firstPrompts, terminalTitles) {
+export function normalizeOrcaResponse(
+  payload,
+  firstPrompts,
+  terminalTitles,
+  sessionStarts,
+) {
   if (!payload || payload.ok !== true || !Array.isArray(payload.result?.worktrees))
     throw new Error('Respuesta inválida de Orca');
 
+  const activePaneKeys = new Set();
   const workspaces = payload.result.worktrees.flatMap(workspace => {
     if (!Array.isArray(workspace?.agents) || workspace.agents.length === 0)
       return [];
 
-    const agents = workspace.agents.map(agent => ({
-      name: agentName(agent, firstPrompts, terminalTitles),
-      type: String(agent.agentType ?? 'agent').toLowerCase(),
-      model: agent.model ?? agent.modelName ?? null,
-      paneKey: agent.paneKey ?? null,
-      status: classifyAgent(agent),
-      prompt: String(agent.prompt ?? '').trim(),
-      lastAssistantMessage: String(agent.lastAssistantMessage ?? '').trim(),
-      toolName: agent.toolName ?? null,
-      stateStartedAt: Number.isFinite(agent.stateStartedAt)
-        ? agent.stateStartedAt
-        : null,
-      updatedAt: Number.isFinite(agent.updatedAt) ? agent.updatedAt : null,
-    }));
+    const agents = workspace.agents.map(agent => {
+      const { name, firstPrompt } = agentDetails(
+        agent,
+        firstPrompts,
+        terminalTitles,
+      );
+      const status = classifyAgent(agent);
+      const toolInput = String(agent.toolInput ?? '').trim();
+      const lastResponse = String(agent.lastAssistantMessage ?? '').trim();
+      const currentActivity = status === AGENT_STATUS.FINISHED ? '' : toolInput;
+      const updatedAt = Number.isFinite(agent.updatedAt) ? agent.updatedAt : null;
+      const turnCompletedAt = Number.isFinite(agent.turnCompletedAt)
+        ? agent.turnCompletedAt
+        : null;
+      const paneKey = agent.paneKey ?? null;
+      const reportedStart = [
+        agent.sessionStartedAt,
+        agent.createdAt,
+        agent.startedAt,
+        agent.stateStartedAt,
+        updatedAt,
+      ].find(Number.isFinite) ?? null;
+      let sessionStartedAt = reportedStart;
+      if (paneKey && sessionStarts) {
+        activePaneKeys.add(paneKey);
+        const previousStart = sessionStarts.get(paneKey);
+        if (Number.isFinite(previousStart))
+          sessionStartedAt = Number.isFinite(reportedStart)
+            ? Math.min(previousStart, reportedStart)
+            : previousStart;
+        if (Number.isFinite(sessionStartedAt))
+          sessionStarts.set(paneKey, sessionStartedAt);
+      }
+      return {
+        name,
+        firstPrompt,
+        type: String(agent.agentType ?? 'agent').toLowerCase(),
+        model: agent.model ?? agent.modelName ?? null,
+        effort: agent.reasoningEffort ?? agent.effort ?? agent.thinkingLevel ?? null,
+        paneKey,
+        status,
+        prompt: String(agent.prompt ?? '').trim(),
+        activity: currentActivity || lastResponse,
+        activityAt: currentActivity ? updatedAt : turnCompletedAt ?? updatedAt,
+        toolName: agent.toolName ?? null,
+        sessionStartedAt,
+        stateStartedAt: Number.isFinite(agent.stateStartedAt)
+          ? agent.stateStartedAt
+          : null,
+        updatedAt,
+      };
+    });
     const counts = countsFor(agents);
     return [{
       id: workspace.worktreeId ?? null,
@@ -167,6 +218,13 @@ export function normalizeOrcaResponse(payload, firstPrompts, terminalTitles) {
       status: highestStatus(counts),
     }];
   });
+
+  if (sessionStarts) {
+    for (const paneKey of sessionStarts.keys()) {
+      if (!activePaneKeys.has(paneKey))
+        sessionStarts.delete(paneKey);
+    }
+  }
 
   const agents = workspaces.flatMap(workspace => workspace.agents);
   const counts = countsFor(agents);

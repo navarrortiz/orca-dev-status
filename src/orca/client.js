@@ -6,6 +6,7 @@ import {
   normalizeTerminalTitles,
 } from './status-model.js';
 import { normalizeResourceResponse } from './session-resources.js';
+import { normalizeTerminalScreenDetails } from './session-details.js';
 
 Gio._promisify(
   Gio.Subprocess.prototype,
@@ -37,6 +38,7 @@ export default class OrcaClient {
   constructor() {
     this._operations = new Set();
     this._firstPrompts = new Map();
+    this._sessionStarts = new Map();
   }
 
   async _run(args, timeoutMs = TIMEOUT_MS) {
@@ -88,6 +90,7 @@ export default class OrcaClient {
       status,
       this._firstPrompts,
       normalizeTerminalTitles(terminals),
+      this._sessionStarts,
     );
   }
 
@@ -95,6 +98,13 @@ export default class OrcaClient {
     return normalizeResourceResponse(await this._run([
       'diagnostics', 'memory', '--json',
     ], RESOURCE_TIMEOUT_MS));
+  }
+
+  async fetchSessionDetails(worktreeId, paneKey) {
+    const handle = await this._terminalHandle(worktreeId, paneKey);
+    return normalizeTerminalScreenDetails(await this._run([
+      'terminal', 'read', '--terminal', handle, '--screen', '--json',
+    ]));
   }
 
   async open() {
