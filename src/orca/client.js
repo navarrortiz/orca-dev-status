@@ -16,6 +16,7 @@ Gio._promisify(
 const TIMEOUT_MS = 4000;
 const OPEN_TIMEOUT_MS = 15000;
 const CLOSE_TIMEOUT_MS = 8000;
+const CREATE_TIMEOUT_MS = 15000;
 const RESOURCE_TIMEOUT_MS = 8000;
 
 function findCli() {
@@ -127,6 +128,20 @@ export default class OrcaClient {
     await this._run([
       'terminal', 'close', '--terminal', handle, '--json',
     ], CLOSE_TIMEOUT_MS);
+  }
+
+  async createAgent(worktreeId, agentType) {
+    if (!worktreeId || !agentType)
+      throw new Error('El worktree no tiene un agente válido');
+
+    await this.open();
+    await this._run([
+      'terminal', 'create',
+      '--worktree', `id:${worktreeId}`,
+      '--command', agentType,
+      '--focus',
+      '--json',
+    ], CREATE_TIMEOUT_MS);
   }
 
   cancel() {

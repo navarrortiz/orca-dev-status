@@ -161,6 +161,7 @@ export function normalizeOrcaResponse(payload, firstPrompts, terminalTitles) {
     return [{
       id: workspace.worktreeId ?? null,
       name: workspaceName(workspace),
+      latestAgentType: agents.at(-1).type,
       agents,
       counts,
       status: highestStatus(counts),

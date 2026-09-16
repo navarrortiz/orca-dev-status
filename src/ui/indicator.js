@@ -37,6 +37,7 @@ class OrcaIndicator extends PanelMenu.Button {
     onOpenOrca,
     onOpenAgent,
     onCloseAgent,
+    onCreateAgent,
     onLoadSessionResources,
   ) {
     super._init(0.5, extension.metadata.name, false);
@@ -62,6 +63,7 @@ class OrcaIndicator extends PanelMenu.Button {
     this._onOpenOrca = onOpenOrca;
     this._onOpenAgent = onOpenAgent;
     this._onCloseAgent = onCloseAgent;
+    this._onCreateAgent = onCreateAgent;
     this._onLoadSessionResources = onLoadSessionResources;
     this._hoverTimeoutId = 0;
     this._hoverCard = new SessionHoverCard(extension);
@@ -172,11 +174,25 @@ class OrcaIndicator extends PanelMenu.Button {
 
       for (const workspace of snapshot.workspaces) {
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        const heading = new PopupMenu.PopupMenuItem(
-          workspace.name,
-          { reactive: false, can_focus: false },
-        );
+        const heading = new PopupMenu.PopupBaseMenuItem({
+          reactive: false,
+          can_focus: false,
+        });
         heading.add_style_class_name('orca-status-workspace');
+        heading.add_child(new St.Label({
+          text: workspace.name,
+          x_expand: true,
+        }));
+        const createButton = new St.Button({
+          child: new St.Icon({ icon_name: 'list-add-symbolic' }),
+          style_class: 'orca-close-button',
+          can_focus: true,
+          accessible_name:
+            `Crear sesión ${workspace.latestAgentType} en ${workspace.name}`,
+        });
+        createButton.connect('clicked', () =>
+          this._createAgent(workspace, createButton));
+        heading.add_child(createButton);
         this.menu.addMenuItem(heading);
 
         for (const agent of workspace.agents) {
@@ -306,6 +322,19 @@ class OrcaIndicator extends PanelMenu.Button {
     } catch (error) {
       Main.notifyError(
         'No se pudo abrir la sesión',
+        error.message ?? String(error),
+      );
+    }
+  }
+
+  async _createAgent(workspace, button) {
+    button.reactive = false;
+    try {
+      await this._onCreateAgent(workspace);
+    } catch (error) {
+      button.reactive = true;
+      Main.notifyError(
+        'No se pudo crear la sesión',
         error.message ?? String(error),
       );
     }

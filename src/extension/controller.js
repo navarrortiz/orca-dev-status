@@ -72,6 +72,7 @@ export default class ExtensionController {
       () => this._client.open(),
       agent => this._switchAgent(agent),
       agent => this._closeAgent(agent),
+      workspace => this._createAgent(workspace),
       paneKey => this._resources.get(paneKey),
     );
     Main.panel.addToStatusArea(
@@ -121,6 +122,11 @@ export default class ExtensionController {
 
   async _switchAgent(agent) {
     await this._client.switchAgent(agent.worktreeId, agent.paneKey);
+  }
+
+  async _createAgent(workspace) {
+    await this._client.createAgent(workspace.id, workspace.latestAgentType);
+    await this._poll(true);
   }
 
   disable() {

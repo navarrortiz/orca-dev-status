@@ -58,6 +58,8 @@ test('normaliza workspaces, títulos y prioridad global', () => {
     'Build',
   ]);
   assert.equal(snapshot.workspaces[0].id, 'repo::/ruta/orca-dev-status');
+  assert.equal(snapshot.workspaces[0].latestAgentType, 'agent');
+  assert.equal(snapshot.workspaces[1].latestAgentType, 'codex');
   assert.deepEqual(snapshot.workspaces[0].agents[0], {
     name: 'Diseño',
     type: 'claude',
