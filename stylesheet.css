@@ -136,3 +136,7 @@
 .orca-session-card-icon {
   icon-size: 13px;
 }
+
+.orca-close-button StIcon.orca-rename-icon {
+  icon-size: 0.75em;
+}

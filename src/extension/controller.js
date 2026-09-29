@@ -78,6 +78,7 @@ export default class ExtensionController {
         agent.worktreeId,
         agent.paneKey,
       ),
+      (agent, title) => this._renameAgent(agent, title),
     );
     Main.panel.addToStatusArea(
       ORCA_STATUS_AREA_NAME,
@@ -121,6 +122,11 @@ export default class ExtensionController {
 
   async _closeAgent(agent) {
     await this._client.closeAgent(agent.worktreeId, agent.paneKey);
+    await this._poll(true);
+  }
+
+  async _renameAgent(agent, title) {
+    await this._client.renameAgent(agent.worktreeId, agent.paneKey, title);
     await this._poll(true);
   }
 

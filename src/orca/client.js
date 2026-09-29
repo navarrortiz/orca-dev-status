@@ -140,6 +140,13 @@ export default class OrcaClient {
     ], CLOSE_TIMEOUT_MS);
   }
 
+  async renameAgent(worktreeId, paneKey, title) {
+    const handle = await this._terminalHandle(worktreeId, paneKey);
+    await this._run([
+      'terminal', 'rename', '--terminal', handle, '--title', title, '--json',
+    ]);
+  }
+
   async createAgent(worktreeId, agentType) {
     if (!worktreeId || !agentType)
       throw new Error('El worktree no tiene un agente válido');

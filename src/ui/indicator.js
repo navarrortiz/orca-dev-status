@@ -40,6 +40,7 @@ class OrcaIndicator extends PanelMenu.Button {
     onCreateAgent,
     onLoadSessionResources,
     onLoadSessionDetails,
+    onRenameAgent,
   ) {
     super._init(0.5, extension.metadata.name, false);
 
@@ -73,6 +74,7 @@ class OrcaIndicator extends PanelMenu.Button {
     this._onCreateAgent = onCreateAgent;
     this._onLoadSessionResources = onLoadSessionResources;
     this._onLoadSessionDetails = onLoadSessionDetails;
+    this._onRenameAgent = onRenameAgent;
     this._hoverTimeoutId = 0;
     this._hoverCard = new SessionHoverCard(extension);
     this._menuOpen = false;
@@ -236,6 +238,16 @@ class OrcaIndicator extends PanelMenu.Button {
             style_class: styleClass,
             accessible_name: accessibleName,
           }));
+          const renameButton = new St.Button({
+            child: new St.Icon({
+              icon_name: 'document-edit-symbolic',
+              style_class: 'orca-rename-icon',
+            }),
+            style_class: 'orca-close-button',
+            can_focus: true,
+            accessible_name: `Renombrar ${agent.name}`,
+          });
+          renameButton.connect('clicked', () => this._requestRename(target));
           const closeButton = new St.Button({
             child: new St.Icon({ icon_name: 'window-close-symbolic' }),
             style_class: 'orca-close-button',
@@ -246,7 +258,8 @@ class OrcaIndicator extends PanelMenu.Button {
             this._requestClose(target, closeButton));
           item.connect('activate', (_item, event) => {
             const actor = event && global.stage.get_event_actor(event);
-            if (!actor || !closeButton.contains(actor))
+            if (!actor || (!closeButton.contains(actor) &&
+                !renameButton.contains(actor)))
               this._openAgent(target);
           });
           item.connect('enter-event', () => {
@@ -257,6 +270,7 @@ class OrcaIndicator extends PanelMenu.Button {
             this._cancelHover();
             return Clutter.EVENT_PROPAGATE;
           });
+          item.add_child(renameButton);
           item.add_child(closeButton);
           this.menu.addMenuItem(item);
         }
@@ -348,6 +362,46 @@ class OrcaIndicator extends PanelMenu.Button {
       button.reactive = true;
       Main.notifyError(
         'No se pudo crear la sesión',
+        error.message ?? String(error),
+      );
+    }
+  }
+
+  _requestRename(agent) {
+    this.menu.close();
+    const dialog = new ModalDialog.ModalDialog();
+    dialog.contentLayout.add_child(new Dialog.MessageDialogContent({
+      title: 'Renombrar sesión',
+      description: 'Deja el campo vacío para restaurar el título automático.',
+    }));
+    const entry = new St.Entry({
+      text: agent.name,
+      can_focus: true,
+      x_expand: true,
+    });
+    dialog.contentLayout.add_child(entry);
+    const submit = () => {
+      dialog.close();
+      this._renameAgent(agent, entry.get_text().trim());
+    };
+    entry.clutter_text.connect('activate', submit);
+    dialog.addButton({
+      label: 'Cancelar',
+      action: () => dialog.close(),
+      key: Clutter.KEY_Escape,
+    });
+    dialog.addButton({ label: 'Guardar', action: submit });
+    dialog.setInitialKeyFocus(entry);
+    dialog.open();
+    entry.clutter_text.set_selection(0, -1);
+  }
+
+  async _renameAgent(agent, title) {
+    try {
+      await this._onRenameAgent(agent, title);
+    } catch (error) {
+      Main.notifyError(
+        'No se pudo renombrar la sesión',
         error.message ?? String(error),
       );
     }
