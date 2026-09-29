@@ -47,8 +47,14 @@ class OrcaIndicator extends PanelMenu.Button {
       style_class: 'orca-status-panel',
       y_align: Clutter.ActorAlign.CENTER,
     });
+    this._box.add_child(new St.Icon({
+      gicon: Gio.icon_new_for_string(`${extension.path}/assets/orca-logo.png`),
+      icon_size: 17,
+      style: '-st-icon-style: regular; icon-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);',
+      y_align: Clutter.ActorAlign.CENTER,
+    }));
     this._countLabel = new St.Label({
-      text: '🐋 0',
+      text: '0',
       y_align: Clutter.ActorAlign.CENTER,
     });
     this._statusLabel = new St.Label({
@@ -97,7 +103,7 @@ class OrcaIndicator extends PanelMenu.Button {
     const [icon, label, styleClass] =
       PRESENTATION[snapshot.status ?? 'unavailable'];
     const priorityCount = snapshot.counts?.[snapshot.status] ?? 0;
-    this._countLabel.text = `🐋 ${priorityCount}`;
+    this._countLabel.text = String(priorityCount);
     this._statusLabel.text = icon;
     this._statusLabel.set_style_class_name(`orca-status-icon ${styleClass}`);
     this.accessible_name =
